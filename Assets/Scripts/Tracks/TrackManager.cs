@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Analytics;
 using UnityEngine.ResourceManagement;
@@ -128,7 +127,11 @@ public class TrackManager : MonoBehaviour
     protected const int k_DesiredSegmentCount = 10;
     protected const float k_SegmentRemovalDistance = -30f;
     protected const float k_Acceleration = 0.2f;
-    
+    protected const float k_CloudDespawnLocalZ = -50f;
+
+    readonly Stack<GameObject> m_CloudPool = new Stack<GameObject>();
+    readonly Dictionary<GameObject, Vector3> m_CloudBaseLocalScales = new Dictionary<GameObject, Vector3>();
+
     protected void Awake()
     {
         m_ScoreAccum = 0.0f;
@@ -283,11 +286,7 @@ public class TrackManager : MonoBehaviour
 
         characterController.gameObject.SetActive(false);
 
-        for (int i = 0; i < parallaxRoot.childCount; ++i)
-        {
-            _parallaxRootChildren--;
-            Destroy(parallaxRoot.GetChild(i).gameObject);
-        }
+        ClearAllClouds();
 
         //if our consumable wasn't used, we put it back in our inventory
         if (characterController.inventory != null)
@@ -308,27 +307,29 @@ public class TrackManager : MonoBehaviour
             _spawnedSegments++;
         }
 
-        if (parallaxRoot != null && currentTheme.cloudPrefabs.Length > 0)
+        if (parallaxRoot != null && m_CurrentThemeData != null && m_CurrentThemeData.cloudPrefabs.Length > 0)
         {
-            while (_parallaxRootChildren < currentTheme.cloudNumber)
+            while (_parallaxRootChildren < m_CurrentThemeData.cloudNumber)
             {
-                float lastZ = parallaxRoot.childCount == 0 ? 0 : parallaxRoot.GetChild(parallaxRoot.childCount - 1).position.z + currentTheme.cloudMinimumDistance.z;
+                float lastZ = parallaxRoot.childCount == 0 ? 0 : parallaxRoot.GetChild(parallaxRoot.childCount - 1).position.z + m_CurrentThemeData.cloudMinimumDistance.z;
 
-                GameObject cloud = currentTheme.cloudPrefabs[Random.Range(0, currentTheme.cloudPrefabs.Length)];
-                if (cloud != null)
+                GameObject cloudPrefab = m_CurrentThemeData.cloudPrefabs[Random.Range(0, m_CurrentThemeData.cloudPrefabs.Length)];
+                if (cloudPrefab != null)
                 {
-                    GameObject obj = Instantiate(cloud);
+                    GameObject obj = AcquireCloud(cloudPrefab);
                     obj.transform.SetParent(parallaxRoot, false);
 
                     obj.transform.localPosition =
-                        Vector3.up * (currentTheme.cloudMinimumDistance.y +
-                                      (Random.value - 0.5f) * currentTheme.cloudSpread.y)
-                        + Vector3.forward * (lastZ + (Random.value - 0.5f) * currentTheme.cloudSpread.z)
-                        + Vector3.right * (currentTheme.cloudMinimumDistance.x +
-                                           (Random.value - 0.5f) * currentTheme.cloudSpread.x);
+                        Vector3.up * (m_CurrentThemeData.cloudMinimumDistance.y +
+                                      (Random.value - 0.5f) * m_CurrentThemeData.cloudSpread.y)
+                        + Vector3.forward * (lastZ + (Random.value - 0.5f) * m_CurrentThemeData.cloudSpread.z)
+                        + Vector3.right * (m_CurrentThemeData.cloudMinimumDistance.x +
+                                           (Random.value - 0.5f) * m_CurrentThemeData.cloudSpread.x);
 
-                    obj.transform.localScale = obj.transform.localScale * (1.0f + (Random.value - 0.5f) * 0.5f);
+                    Vector3 baseScale = m_CloudBaseLocalScales[obj];
+                    obj.transform.localScale = baseScale * (1.0f + (Random.value - 0.5f) * 0.5f);
                     obj.transform.localRotation = Quaternion.AngleAxis(Random.value * 360.0f, Vector3.up);
+                    obj.SetActive(true);
                     _parallaxRootChildren++;
                 }
             }
@@ -405,17 +406,16 @@ public class TrackManager : MonoBehaviour
         characterTransform.rotation = currentRot;
         characterTransform.position = currentPos;
 
-        if (parallaxRoot != null && currentTheme.cloudPrefabs.Length > 0)
+        if (parallaxRoot != null && m_CurrentThemeData != null && m_CurrentThemeData.cloudPrefabs.Length > 0)
         {
-            for (int i = 0; i < parallaxRoot.childCount; ++i)
+            for (int i = parallaxRoot.childCount - 1; i >= 0; --i)
             {
                 Transform child = parallaxRoot.GetChild(i);
 
-                // Destroy unneeded clouds
-                if ((child.localPosition - currentPos).z < -50)
+                if ((child.localPosition - currentPos).z < k_CloudDespawnLocalZ)
                 {
                     _parallaxRootChildren--;
-                    Destroy(child.gameObject);
+                    ReleaseCloud(child.gameObject);
                 }
             }
         }
@@ -673,5 +673,46 @@ public class TrackManager : MonoBehaviour
     {
         int finalAmount = amount;
         m_Score += finalAmount * m_Multiplier;
+    }
+
+    GameObject AcquireCloud(GameObject prefab)
+    {
+        while (m_CloudPool.Count > 0)
+        {
+            GameObject pooled = m_CloudPool.Pop();
+            if (pooled != null)
+                return pooled;
+        }
+
+        GameObject created = Instantiate(prefab);
+        m_CloudBaseLocalScales[created] = prefab.transform.localScale;
+        created.SetActive(false);
+        return created;
+    }
+
+    void ReleaseCloud(GameObject cloud)
+    {
+        cloud.SetActive(false);
+        cloud.transform.SetParent(null, false);
+        m_CloudPool.Push(cloud);
+    }
+
+    void ClearAllClouds()
+    {
+        if (parallaxRoot != null)
+        {
+            for (int i = parallaxRoot.childCount - 1; i >= 0; --i)
+                Destroy(parallaxRoot.GetChild(i).gameObject);
+        }
+
+        while (m_CloudPool.Count > 0)
+        {
+            GameObject pooled = m_CloudPool.Pop();
+            if (pooled != null)
+                Destroy(pooled);
+        }
+
+        m_CloudBaseLocalScales.Clear();
+        _parallaxRootChildren = 0;
     }
 }
