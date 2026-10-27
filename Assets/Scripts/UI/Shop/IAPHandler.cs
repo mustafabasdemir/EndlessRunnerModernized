@@ -19,7 +19,10 @@ public class IAPHandler : MonoBehaviour
         if (product?.definition == null)
             return;
 
-        if (!IAPPurchaseFulfillmentPolicy.FulfillmentEnabled)
+        var context = IAPPurchaseContextFactory.FromProduct(product);
+        var result = IAPPremiumFulfillmentServices.DefaultProcessor.TryFulfill(context, out var diagnostic);
+
+        if (result == IAPFulfillmentResult.FulfillmentDisabled)
         {
             Debug.LogWarning(
                 "IAP purchase received but fulfillment is disabled (IAPPurchaseFulfillmentPolicy.FulfillmentEnabled). Product: "
@@ -27,39 +30,50 @@ public class IAPHandler : MonoBehaviour
             return;
         }
 
+        if (result != IAPFulfillmentResult.Success && result != IAPFulfillmentResult.AlreadyProcessed)
+        {
+            Debug.LogError(
+                "IAP fulfillment failed for product "
+                + product.definition.id
+                + ": "
+                + result
+                + " — "
+                + diagnostic);
+            return;
+        }
+
         if (!IAPPurchaseFulfillmentPolicy.PremiumAmountByProductId.TryGetValue(product.definition.id, out int amount))
             return;
 
-        // TODO (next phase): deduplicate by transaction id before modifying PlayerData.
-        PlayerData.instance.premium += amount;
-        PlayerData.instance.Save();
-
 #if UNITY_ANALYTICS
-        var transactionId = product.transactionID;
-        var transactionContext = "premium_store";
-        var itemId = product.definition.id;
-        var itemType = "consumable";
-        var level = PlayerData.instance.rank.ToString();
+        if (result == IAPFulfillmentResult.Success)
+        {
+            var transactionId = product.transactionID;
+            var transactionContext = "premium_store";
+            var itemId = product.definition.id;
+            var itemType = "consumable";
+            var level = PlayerData.instance.rank.ToString();
 
-        AnalyticsEvent.IAPTransaction(
-            transactionContext,
-            (float)product.metadata.localizedPrice,
-            itemId,
-            itemType,
-            level,
-            transactionId
-        );
+            AnalyticsEvent.IAPTransaction(
+                transactionContext,
+                (float)product.metadata.localizedPrice,
+                itemId,
+                itemType,
+                level,
+                transactionId
+            );
 
-        AnalyticsEvent.ItemAcquired(
-            AcquisitionType.Premium,
-            transactionContext,
-            amount,
-            itemId,
-            PlayerData.instance.premium,
-            itemType,
-            level,
-            transactionId
-        );
+            AnalyticsEvent.ItemAcquired(
+                AcquisitionType.Premium,
+                transactionContext,
+                amount,
+                itemId,
+                PlayerData.instance.premium,
+                itemType,
+                level,
+                transactionId
+            );
+        }
 #endif
     }
 

@@ -1,13 +1,32 @@
 using System.Collections.Generic;
 
 /// <summary>
-/// IAP premium grant policy for migration phases. Live fulfillment stays off until
-/// receipt validation, durable transaction tracking, and store confirmation order are implemented.
+/// IAP premium grant and store session policy for migration phases.
+/// Live fulfillment, store connection, and ConfirmPurchase stay off until explicitly enabled.
 /// </summary>
 public static class IAPPurchaseFulfillmentPolicy
 {
     /// <summary>When false, purchase callbacks must not modify PlayerData or persist rewards.</summary>
-    public static bool FulfillmentEnabled => false;
+    public static bool FulfillmentEnabled
+    {
+        get
+        {
+#if UNITY_EDITOR
+            if (IAPPurchaseFulfillmentPolicyTestHook.FulfillmentEnabledOverride.HasValue)
+                return IAPPurchaseFulfillmentPolicyTestHook.FulfillmentEnabledOverride.Value;
+#endif
+            return false;
+        }
+    }
+
+    /// <summary>When false, IAPStoreSessionCoordinator does not connect to Google Play / App Store.</summary>
+    public static bool StoreConnectionEnabled => false;
+
+    /// <summary>When false, ConfirmPurchase is never invoked (pending orders stay with the store).</summary>
+    public static bool ConfirmPurchasesEnabled => false;
+
+    /// <summary>When true, fulfillment requires a non-empty receipt payload (IAP 5 PendingOrder).</summary>
+    public static bool RequireReceiptPayloadForFulfillment => false;
 
     public static readonly IReadOnlyDictionary<string, int> PremiumAmountByProductId =
         new Dictionary<string, int>
@@ -17,9 +36,11 @@ public static class IAPPurchaseFulfillmentPolicy
             { "100_premium", 100 },
         };
 
-    // Planned deduplication (not active in this phase):
-    // 1) On pending/confirmed purchase, read store transaction id from Order.Info (IAP 5) or Product.transactionID (codeless legacy).
-    // 2) Before granting premium, check a durable processed-id set (new PlayerData save version or sidecar file).
-    // 3) If id already processed, skip grant but still allow ConfirmPurchase when fulfillment is enabled.
-    // 4) Persist id only after successful premium increment + Save().
+    // Transaction safety (IAP sidecar: iap_processed_transactions_v1.bin):
+    // 1) Reserve store transaction id (Pending) before granting premium.
+    // 2) Validate receipt (server-side validator required for production — see IIAPReceiptValidator).
+    // 3) Grant premium + PlayerData.Save(), then mark PremiumPersisted, then Completed.
+    // 4) Duplicate callbacks: Completed → skip grant; ConfirmPurchase only when ConfirmPurchasesEnabled.
+    // 5) save.bin version unchanged — existing player saves load without migration.
+    // 6) Reinstall / new device: local sidecar alone cannot prove entitlement — use backend ledger.
 }
