@@ -25,8 +25,8 @@ public class MissionEntry : MonoBehaviour
 
     public void FillWithMission(MissionBase m, MissionUI owner)
     {
-        descText.text = m.GetMissionDesc();
-        rewardText.text = m.reward.ToString();
+        descText.text = m.GetMissionDesc().ToUpperInvariant();
+        rewardText.text = "+" + m.reward;
 
         claimButton.onClick.RemoveAllListeners();
 
@@ -36,6 +36,7 @@ public class MissionEntry : MonoBehaviour
         else if (progressFill != null)
         {
             var rt = progressFill.rectTransform;
+            rt.pivot = new Vector2(0f, 0.5f);
             rt.anchorMin = new Vector2(0f, 0f);
             rt.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1f);
             rt.offsetMin = Vector2.zero;
@@ -64,7 +65,7 @@ public class MissionEntry : MonoBehaviour
             rewardText.color = Ui20Palette.AccentOrange;
             progressText.color = Ui20Palette.DeepNavy;
 
-            progressText.text = ((int)m.progress) + " / " + ((int)m.max);
+            progressText.text = FormatProgressLine(m);
         }
 
         if (rewardIcon != null)
@@ -77,5 +78,15 @@ public class MissionEntry : MonoBehaviour
             progressSection.SetActive(visible);
         else if (progressText != null)
             progressText.gameObject.SetActive(visible);
+    }
+
+    static string FormatProgressLine(MissionBase m)
+    {
+        string desc = m.GetMissionDesc().ToLowerInvariant();
+        int current = (int)m.progress;
+        int target = (int)m.max;
+        if (desc.Contains("single run") || desc.StartsWith("slide for"))
+            return current + " / " + target + " m";
+        return current + " / " + target;
     }
 }

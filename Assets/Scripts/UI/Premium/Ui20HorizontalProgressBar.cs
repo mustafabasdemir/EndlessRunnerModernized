@@ -11,6 +11,7 @@ public class Ui20HorizontalProgressBar : MonoBehaviour
             return;
 
         float t = Mathf.Clamp01(value);
+        m_Fill.pivot = new Vector2(0f, 0.5f);
         m_Fill.anchorMin = new Vector2(0f, 0f);
         m_Fill.anchorMax = new Vector2(t, 1f);
         m_Fill.offsetMin = Vector2.zero;

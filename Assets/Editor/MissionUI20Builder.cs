@@ -16,7 +16,7 @@ public static class MissionUI20Builder
     {
         PremiumUIEditorSetup.GeneratePremiumAssets();
         RebuildMissionEntryPrefab();
-        RestyleMissionPopupPrefab();
+        CleanRebuildMissionPopupPrefab();
         AssetDatabase.SaveAssets();
         Debug.Log("Missions UI 2.0 rebuild complete.");
     }
@@ -34,19 +34,16 @@ public static class MissionUI20Builder
     static Font UiFont => AssetDatabase.LoadAssetAtPath<Font>($"Assets/Fonts/LuckiestGuy.ttf") ??
                           AssetDatabase.LoadAssetAtPath<Font>(AssetDatabase.GUIDToAssetPath(FontGuid));
 
-    static Sprite CoinRewardSprite()
+    static Sprite AtlasSpriteByName(string spriteName)
     {
         var path = AssetDatabase.GUIDToAssetPath(UiAtlasGuid);
         foreach (var a in AssetDatabase.LoadAllAssetsAtPath(path))
         {
-            if (a is not Sprite s)
-                continue;
-            var n = s.name.ToLowerInvariant();
-            if (n.Contains("coin") || n.Contains("fish") || n.Contains("premium_0"))
+            if (a is Sprite s && s.name == spriteName)
                 return s;
         }
 
-        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        return null;
     }
 
     static void RebuildMissionEntryPrefab()
@@ -66,9 +63,11 @@ public static class MissionUI20Builder
         ApplySlice(cardImage, theme != null ? theme.cardElevated : null, Ui20Palette.SurfaceWhite);
 
         var rootLe = root.GetComponent<LayoutElement>() ?? root.AddComponent<LayoutElement>();
-        rootLe.minHeight = 196;
-        rootLe.preferredHeight = 196;
+        rootLe.minHeight = 160;
+        rootLe.preferredHeight = -1;
         rootLe.flexibleWidth = 1f;
+        var rootFitter = root.GetComponent<ContentSizeFitter>() ?? root.AddComponent<ContentSizeFitter>();
+        rootFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         var vlg = root.GetComponent<VerticalLayoutGroup>() ?? root.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(18, 18, 16, 16);
@@ -79,46 +78,54 @@ public static class MissionUI20Builder
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
 
-        var desc = CreateText(root.transform, "DescText", "Mission description", 26, Ui20Palette.BodyText, TextAnchor.UpperLeft);
+        var desc = CreateText(root.transform, "DescText", "Mission description", 24, Ui20Palette.BodyText, TextAnchor.UpperLeft);
         desc.horizontalOverflow = HorizontalWrapMode.Wrap;
         desc.verticalOverflow = VerticalWrapMode.Truncate;
         var descLe = desc.gameObject.AddComponent<LayoutElement>();
-        descLe.minHeight = 72;
-        descLe.preferredHeight = 72;
-        descLe.flexibleHeight = 0;
+        descLe.minHeight = 64;
+        descLe.preferredHeight = -1;
 
         var progressSection = CreateRect(root.transform, "ProgressSection");
+        PrepareVerticalLayoutChild(progressSection, 52f);
         var progressSectionLe = progressSection.gameObject.AddComponent<LayoutElement>();
-        progressSectionLe.minHeight = 46;
-        progressSectionLe.preferredHeight = 46;
+        progressSectionLe.minHeight = 52;
+        progressSectionLe.preferredHeight = 52;
 
         var progressVlg = progressSection.gameObject.AddComponent<VerticalLayoutGroup>();
-        progressVlg.spacing = 6;
+        progressVlg.spacing = 8;
         progressVlg.childControlWidth = true;
         progressVlg.childControlHeight = true;
+        progressVlg.childForceExpandWidth = true;
         progressVlg.childForceExpandHeight = false;
 
+        var progressText = CreateText(progressSection, "ProgressText", "0 / 100", 18, Ui20Palette.DeepNavy, TextAnchor.MiddleLeft);
+        PrepareVerticalLayoutChild(progressText.rectTransform, 22f);
+        var progressTextLe = progressText.gameObject.AddComponent<LayoutElement>();
+        progressTextLe.minHeight = 22;
+        progressTextLe.preferredHeight = 22;
+
         var track = CreateRect(progressSection, "ProgressTrack");
+        PrepareVerticalLayoutChild(track, 22f);
         var trackLe = track.gameObject.AddComponent<LayoutElement>();
-        trackLe.minHeight = 16;
-        trackLe.preferredHeight = 16;
+        trackLe.minHeight = 22;
+        trackLe.preferredHeight = 22;
+        trackLe.flexibleWidth = 1f;
         var trackBg = track.gameObject.AddComponent<Image>();
-        ApplySlice(trackBg, theme != null ? theme.progressBackground : null, new Color(1f, 1f, 1f, 0.45f));
+        ApplySlice(trackBg, theme != null ? theme.progressBackground : null, new Color(0.92f, 0.94f, 0.97f, 1f));
+        track.gameObject.AddComponent<RectMask2D>();
 
         var fill = CreateRect(track, "Fill");
+        fill.pivot = new Vector2(0f, 0.5f);
         fill.anchorMin = Vector2.zero;
         fill.anchorMax = new Vector2(0.35f, 1f);
         fill.offsetMin = Vector2.zero;
         fill.offsetMax = Vector2.zero;
         var fillImg = fill.gameObject.AddComponent<Image>();
         ApplySlice(fillImg, theme != null ? theme.progressFill : null, Ui20Palette.MintGreen);
+        fillImg.raycastTarget = false;
 
         var progressBar = track.gameObject.AddComponent<Ui20HorizontalProgressBar>();
         SetPrivateField(progressBar, "m_Fill", fill);
-
-        var progressText = CreateText(progressSection, "ProgressText", "0 / 100", 20, Ui20Palette.DeepNavy, TextAnchor.MiddleLeft);
-        var progressTextLe = progressText.gameObject.AddComponent<LayoutElement>();
-        progressTextLe.minHeight = 24;
 
         var footer = CreateRect(root.transform, "Footer");
         var footerLe = footer.gameObject.AddComponent<LayoutElement>();
@@ -150,7 +157,7 @@ public static class MissionUI20Builder
         rewardIconLe.preferredWidth = 36;
         rewardIconLe.minHeight = 36;
         var rewardIcon = rewardIconGo.gameObject.AddComponent<Image>();
-        rewardIcon.sprite = CoinRewardSprite();
+        rewardIcon.sprite = AtlasSpriteByName("PremiumIcone") ?? AtlasSpriteByName("FishboneIcone");
         rewardIcon.preserveAspect = true;
         rewardIcon.color = Color.white;
 
@@ -161,7 +168,7 @@ public static class MissionUI20Builder
         var spacerLe = spacer.gameObject.AddComponent<LayoutElement>();
         spacerLe.flexibleWidth = 1f;
 
-        var claimBtn = CreateButton(footer, "ClaimButton", "CLAIM", theme);
+        var claimBtn = CreateButton(footer, "ClaimButton", "CLAIM REWARD", theme);
         var claimLe = claimBtn.GetComponent<LayoutElement>() ?? claimBtn.gameObject.AddComponent<LayoutElement>();
         claimLe.minWidth = 168;
         claimLe.preferredWidth = 168;
@@ -176,126 +183,133 @@ public static class MissionUI20Builder
         entry.progressFill = fillImg;
         entry.progressSection = progressSection.gameObject;
         entry.rewardIcon = rewardIcon;
-        entry.notCompletedColor = Ui20Palette.SurfaceWhite;
-        entry.completedColor = new Color(0.92f, 0.97f, 1f, 1f);
+        entry.notCompletedColor = Color.white;
+        entry.completedColor = new Color(0.96f, 0.98f, 1f, 1f);
 
         PrefabUtility.SaveAsPrefabAsset(root, MissionEntryPath);
         PrefabUtility.UnloadPrefabContents(root);
     }
 
-    static void RestyleMissionPopupPrefab()
+    static void CleanRebuildMissionPopupPrefab()
     {
         var root = PrefabUtility.LoadPrefabContents(MissionPopupPath);
+        var missionUi = root.GetComponent<MissionUI>();
         RemoveComponentIfExists<PremiumMissionPopupStyle>(root);
         RemoveComponentIfExists<PremiumUIFadeIn>(root);
-
         var motion = root.GetComponent<Ui20MissionModalMotion>() ?? root.AddComponent<Ui20MissionModalMotion>();
-        var group = root.GetComponent<CanvasGroup>() ?? root.AddComponent<CanvasGroup>();
+        if (root.GetComponent<CanvasGroup>() == null)
+            root.AddComponent<CanvasGroup>();
 
+        var theme = Theme;
         var backdrop = root.GetComponent<Image>();
         if (backdrop != null)
         {
-            var theme = Theme;
             ApplySlice(backdrop, theme != null ? theme.overlayDim : null, Ui20Palette.Overlay);
             backdrop.raycastTarget = true;
         }
 
         var panel = FindDeep(root.transform, "MissionBackground");
-        if (panel != null)
+        var scrollView = FindDeep(root.transform, "Scroll View");
+        var content = FindDeep(root.transform, "Content");
+        var closeButton = FindDeep(root.transform, "CloseButton");
+
+        if (panel == null || scrollView == null || content == null)
         {
-            var panelImg = panel.GetComponent<Image>();
-            if (panelImg != null)
-                ApplySlice(panelImg, Theme != null ? Theme.panelSurface : null, Ui20Palette.SurfaceWhite);
-
-            panel.anchorMin = new Vector2(0.06f, 0.14f);
-            panel.anchorMax = new Vector2(0.94f, 0.86f);
-            panel.offsetMin = Vector2.zero;
-            panel.offsetMax = Vector2.zero;
-
-            SetPrivateField(motion, "m_Panel", panel);
+            Debug.LogError("MissionPopup is missing MissionBackground, Scroll View, or Content.");
+            PrefabUtility.UnloadPrefabContents(root);
+            return;
         }
 
-        foreach (var title in root.GetComponentsInChildren<Text>(true))
+        if (closeButton != null)
+            closeButton.SetParent(root.transform, false);
+        scrollView.SetParent(root.transform, false);
+
+        for (int i = panel.childCount - 1; i >= 0; i--)
+            Object.DestroyImmediate(panel.GetChild(i).gameObject);
+
+        var panelImg = panel.GetComponent<Image>();
+        ApplySlice(panelImg, theme != null ? theme.panelSurface : null, Ui20Palette.SurfaceWhite);
+        panel.anchorMin = new Vector2(0.05f, 0.12f);
+        panel.anchorMax = new Vector2(0.95f, 0.88f);
+        panel.offsetMin = Vector2.zero;
+        panel.offsetMax = Vector2.zero;
+        SetPrivateField(motion, "m_Panel", panel);
+
+        var headerBand = CreateRect(panel, "HeaderBand");
+        headerBand.anchorMin = new Vector2(0f, 1f);
+        headerBand.anchorMax = new Vector2(1f, 1f);
+        headerBand.pivot = new Vector2(0.5f, 1f);
+        headerBand.sizeDelta = new Vector2(0f, 80f);
+        headerBand.anchoredPosition = Vector2.zero;
+        var headerImg = headerBand.gameObject.AddComponent<Image>();
+        ApplySlice(headerImg, theme != null ? theme.tabActive : null, Ui20Palette.PrimaryBlue);
+
+        var title = CreateText(headerBand, "TitleText", "MISSIONS", 36, Color.white, TextAnchor.MiddleCenter);
+        Stretch(title.rectTransform);
+        title.rectTransform.offsetMin = new Vector2(16f, 0f);
+        title.rectTransform.offsetMax = new Vector2(-56f, 0f);
+        title.fontStyle = FontStyle.Bold;
+
+        if (closeButton != null)
         {
-            if (!title.text.ToUpperInvariant().Contains("MISSION"))
-                continue;
-            title.text = "MISSIONS";
-            title.fontSize = 40;
-            title.color = Ui20Palette.SurfaceWhite;
-            title.fontStyle = FontStyle.Bold;
-            title.alignment = TextAnchor.MiddleCenter;
-            title.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var shadow = title.GetComponent<Shadow>();
-            if (shadow != null)
-                Object.DestroyImmediate(shadow);
+            closeButton.SetParent(headerBand, false);
+            closeButton.anchorMin = new Vector2(1f, 0.5f);
+            closeButton.anchorMax = new Vector2(1f, 0.5f);
+            closeButton.pivot = new Vector2(1f, 0.5f);
+            closeButton.anchoredPosition = new Vector2(-10f, 0f);
+            closeButton.sizeDelta = new Vector2(48f, 48f);
+            StyleCloseButton(closeButton);
         }
 
-        if (panel != null)
+        var missionsContainer = CreateRect(panel, "MissionsContainer");
+        Stretch(missionsContainer);
+        missionsContainer.offsetMin = new Vector2(10f, 10f);
+        missionsContainer.offsetMax = new Vector2(-10f, -90f);
+
+        scrollView.SetParent(missionsContainer, false);
+        Stretch(scrollView);
+
+        var viewport = FindDeep(scrollView, "Viewport");
+        if (viewport != null)
         {
-            var headerBand = FindDeep(panel, "HeaderBand");
-            if (headerBand == null)
-            {
-                headerBand = CreateRect(panel, "HeaderBand");
-                headerBand.SetAsFirstSibling();
-                headerBand.anchorMin = new Vector2(0f, 1f);
-                headerBand.anchorMax = new Vector2(1f, 1f);
-                headerBand.pivot = new Vector2(0.5f, 1f);
-                headerBand.sizeDelta = new Vector2(0f, 96f);
-                headerBand.anchoredPosition = Vector2.zero;
-            }
-
-            var headerImg = headerBand.GetComponent<Image>() ?? headerBand.gameObject.AddComponent<Image>();
-            ApplySlice(headerImg, Theme != null ? Theme.tabActive : null, Ui20Palette.PrimaryBlue);
-
-            var titleRt = FindDeep(panel, "Text");
-            if (titleRt != null)
-            {
-                titleRt.SetParent(headerBand, false);
-                titleRt.anchorMin = Vector2.zero;
-                titleRt.anchorMax = Vector2.one;
-                titleRt.offsetMin = new Vector2(72f, 0f);
-                titleRt.offsetMax = new Vector2(-72f, 0f);
-            }
-
-            var closeRt = FindDeep(root.transform, "CloseButton");
-            if (closeRt != null)
-            {
-                closeRt.SetParent(headerBand, false);
-                closeRt.anchorMin = new Vector2(1f, 0.5f);
-                closeRt.anchorMax = new Vector2(1f, 0.5f);
-                closeRt.pivot = new Vector2(1f, 0.5f);
-                closeRt.anchoredPosition = new Vector2(-12f, 0f);
-                closeRt.sizeDelta = new Vector2(56f, 56f);
-            }
+            var vpImg = viewport.GetComponent<Image>() ?? viewport.gameObject.AddComponent<Image>();
+            vpImg.raycastTarget = false;
+            vpImg.color = new Color(0.97f, 0.98f, 1f, 1f);
         }
 
-        var close = FindDeep(root.transform, "CloseButton");
-        if (close != null)
-        {
-            var btn = close.GetComponent<Button>();
-            if (btn != null && Theme != null)
-                PremiumUIStyler.ApplySecondaryButton(btn, Theme);
-            close.gameObject.AddComponent<Ui20ButtonPressFeedback>();
-        }
+        content.SetParent(viewport != null ? viewport : scrollView, false);
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = new Vector2(0f, 0f);
 
-        var scrollContent = FindDeep(root.transform, "Content");
-        if (scrollContent != null)
-        {
-            var contentVlg = scrollContent.GetComponent<VerticalLayoutGroup>() ?? scrollContent.gameObject.AddComponent<VerticalLayoutGroup>();
-            contentVlg.spacing = 14;
-            contentVlg.padding = new RectOffset(14, 14, 8, 14);
-            contentVlg.childControlWidth = true;
-            contentVlg.childControlHeight = true;
-            contentVlg.childForceExpandWidth = true;
-            contentVlg.childForceExpandHeight = false;
+        var contentVlg = content.GetComponent<VerticalLayoutGroup>() ?? content.gameObject.AddComponent<VerticalLayoutGroup>();
+        contentVlg.spacing = 12;
+        contentVlg.padding = new RectOffset(4, 4, 4, 8);
+        contentVlg.childControlWidth = true;
+        contentVlg.childControlHeight = true;
+        contentVlg.childForceExpandWidth = true;
+        contentVlg.childForceExpandHeight = false;
 
-            var fitter = scrollContent.GetComponent<ContentSizeFitter>() ?? scrollContent.gameObject.AddComponent<ContentSizeFitter>();
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-        }
+        var fitter = content.GetComponent<ContentSizeFitter>() ?? content.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        if (missionUi != null)
+            missionUi.missionPlace = content;
 
         PrefabUtility.SaveAsPrefabAsset(root, MissionPopupPath);
         PrefabUtility.UnloadPrefabContents(root);
+    }
+
+    static void Stretch(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+        rt.localScale = Vector3.one;
     }
 
     static void CapturePreview()
@@ -394,6 +408,34 @@ public static class MissionUI20Builder
         rt.SetParent(parent, false);
         rt.localScale = Vector3.one;
         return rt;
+    }
+
+    static void PrepareVerticalLayoutChild(RectTransform rt, float preferredHeight)
+    {
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = new Vector2(0f, preferredHeight);
+    }
+
+    static void StyleCloseButton(RectTransform closeRt)
+    {
+        var img = closeRt.GetComponent<Image>();
+        var closeSprite = AtlasSpriteByName("CloseButton");
+        if (img != null && closeSprite != null)
+        {
+            img.sprite = closeSprite;
+            img.type = Image.Type.Simple;
+            img.color = Color.white;
+            img.preserveAspect = true;
+        }
+
+        for (int i = closeRt.childCount - 1; i >= 0; i--)
+            Object.DestroyImmediate(closeRt.GetChild(i).gameObject);
+
+        if (closeRt.GetComponent<Ui20ButtonPressFeedback>() == null)
+            closeRt.gameObject.AddComponent<Ui20ButtonPressFeedback>();
     }
 
     static Text CreateText(Transform parent, string name, string text, int size, Color color, TextAnchor align)

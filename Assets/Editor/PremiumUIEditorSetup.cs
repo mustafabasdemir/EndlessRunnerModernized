@@ -25,8 +25,8 @@ public static class PremiumUIEditorSetup
         var btnDanger = SaveSprite("ButtonDanger", 128, 64, new Color(0.82f, 0.22f, 0.24f, 1f), new Color(0.62f, 0.12f, 0.14f, 1f), 0.15f);
         var tabActive = SaveSprite("TabActive", 128, 48, PremiumUIColor.PrimaryBlue, new Color(0.08f, 0.22f, 0.52f, 1f), 0.12f);
         var tabInactive = SaveSprite("TabInactive", 128, 48, new Color(0.93f, 0.95f, 0.99f, 1f), new Color(0.82f, 0.86f, 0.92f, 1f), 0.12f);
-        var progressBg = SaveSprite("ProgressBackground", 128, 32, new Color(1f, 1f, 1f, 0.35f), new Color(0.75f, 0.78f, 0.84f, 0.5f), 0.08f);
-        var progressFill = SaveSprite("ProgressFill", 128, 32, PremiumUIColor.SuccessGreen, new Color(0.05f, 0.55f, 0.42f, 1f), 0.08f);
+        var progressBg = SaveSprite("ProgressBackground", 256, 24, new Color(0.92f, 0.94f, 0.97f, 1f), new Color(0.75f, 0.78f, 0.84f, 0.5f), 0.08f, 10);
+        var progressFill = SaveSprite("ProgressFill", 256, 24, Ui20Palette.MintGreen, new Color(0.05f, 0.55f, 0.42f, 1f), 0.08f, 10);
         var overlay = SaveSprite("OverlayDim", 64, 64, new Color(0.04f, 0.08f, 0.14f, 0.85f), Color.clear, 0f);
 
         var theme = AssetDatabase.LoadAssetAtPath<PremiumUITheme>(ThemePath);
@@ -56,17 +56,17 @@ public static class PremiumUIEditorSetup
         Debug.Log("Premium UI sprites and theme generated.");
     }
 
-    static Sprite SaveSprite(string name, int width, int height, Color fill, Color border, float borderStrength)
+    static Sprite SaveSprite(string name, int width, int height, Color fill, Color border, float borderStrength, int radius = 18)
     {
         string path = $"{GeneratedFolder}/{name}.png";
         var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        int radius = 18;
+        int slice = Mathf.Min(radius, Mathf.Min(width, height) / 2);
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                bool inside = InsideRoundedRect(x, y, width, height, radius);
-                bool edge = inside && NearEdge(x, y, width, height, radius, 2);
+                bool inside = InsideRoundedRect(x, y, width, height, slice);
+                bool edge = inside && NearEdge(x, y, width, height, slice, 2);
                 Color c = !inside ? Color.clear : (edge && borderStrength > 0f ? Color.Lerp(fill, border, borderStrength) : fill);
                 tex.SetPixel(x, y, c);
             }
@@ -82,7 +82,8 @@ public static class PremiumUIEditorSetup
         {
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
-            importer.spriteBorder = new Vector4(32, 32, 32, 32);
+            float borderPx = slice;
+            importer.spriteBorder = new Vector4(borderPx, borderPx, borderPx, borderPx);
             importer.alphaIsTransparency = true;
             importer.mipmapEnabled = false;
             importer.SaveAndReimport();
