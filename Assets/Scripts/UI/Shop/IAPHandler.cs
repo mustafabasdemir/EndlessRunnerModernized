@@ -1,15 +1,12 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
-#if UNITY_PURCHASING
+﻿using UnityEngine;
 using UnityEngine.Purchasing;
-#endif
+using UnityEngine.Purchasing.Extension;
 #if UNITY_ANALYTICS
 using UnityEngine.Analytics;
 #endif
 
 public class IAPHandler : MonoBehaviour
 {
-#if UNITY_PURCHASING
     private void OnEnable()
     {
 #if UNITY_ANALYTICS
@@ -19,58 +16,63 @@ public class IAPHandler : MonoBehaviour
 
     public void ProductBought(Product product)
     {
-        int amount = 0;
-        switch (product.definition.id)
+        if (product?.definition == null)
+            return;
+
+        if (!IAPPurchaseFulfillmentPolicy.FulfillmentEnabled)
         {
-            case "10_premium":
-                amount = 10;
-                break;
-            case "50_premium":
-                amount = 50;
-                break;
-            case "100_premium":
-                amount = 100;
-                break;
+            Debug.LogWarning(
+                "IAP purchase received but fulfillment is disabled (IAPPurchaseFulfillmentPolicy.FulfillmentEnabled). Product: "
+                + product.definition.id);
+            return;
         }
 
-        if (amount > 0)
-        {
-            PlayerData.instance.premium += amount;
-            PlayerData.instance.Save();
+        if (!IAPPurchaseFulfillmentPolicy.PremiumAmountByProductId.TryGetValue(product.definition.id, out int amount))
+            return;
 
-#if UNITY_ANALYTICS // Using Analytics Standard Events v0.3.0
-            var transactionId = product.transactionID;
-            var transactionContext = "premium_store";
-            var itemId = product.definition.id;
-            var itemType = "consumable";
-            var level = PlayerData.instance.rank.ToString();
-            
-            AnalyticsEvent.IAPTransaction(
-                transactionContext,
-                (float)product.metadata.localizedPrice,
-                itemId,
-                itemType,
-                level,
-                transactionId
-            );
-            
-            AnalyticsEvent.ItemAcquired( 
-                AcquisitionType.Premium, // Currency type
-                transactionContext,
-                amount,
-                itemId,
-                PlayerData.instance.premium, // Item balance
-                itemType,
-                level,
-                transactionId
-            );
+        // TODO (next phase): deduplicate by transaction id before modifying PlayerData.
+        PlayerData.instance.premium += amount;
+        PlayerData.instance.Save();
+
+#if UNITY_ANALYTICS
+        var transactionId = product.transactionID;
+        var transactionContext = "premium_store";
+        var itemId = product.definition.id;
+        var itemType = "consumable";
+        var level = PlayerData.instance.rank.ToString();
+
+        AnalyticsEvent.IAPTransaction(
+            transactionContext,
+            (float)product.metadata.localizedPrice,
+            itemId,
+            itemType,
+            level,
+            transactionId
+        );
+
+        AnalyticsEvent.ItemAcquired(
+            AcquisitionType.Premium,
+            transactionContext,
+            amount,
+            itemId,
+            PlayerData.instance.premium,
+            itemType,
+            level,
+            transactionId
+        );
 #endif
-        }
     }
 
     public void ProductError(Product product, PurchaseFailureReason reason)
     {
-        Debug.LogError("Product : " + product.definition.id + " couldn't be bought because " + reason);
+        var productId = product != null && product.definition != null ? product.definition.id : "unknown";
+        Debug.LogError("Product : " + productId + " couldn't be bought because " + reason);
     }
-#endif
+
+    public void ProductError(Product product, PurchaseFailureDescription description)
+    {
+        var productId = product != null && product.definition != null ? product.definition.id : "unknown";
+        var reason = description != null ? description.reason.ToString() : "unknown";
+        Debug.LogError("Product : " + productId + " couldn't be bought because " + reason);
+    }
 }
