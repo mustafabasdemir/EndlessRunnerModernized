@@ -67,16 +67,13 @@ public class ShopItemList : ShopList
 		int count = 0;
 		PlayerData.instance.consumables.TryGetValue(c.GetConsumableType(), out count);
 		itemList.countText.text = count.ToString();
+		itemList.buyButton.interactable = true;
 
-		if (c.GetPrice() > PlayerData.instance.coins)
-		{
+		bool canAfford = c.GetPrice() <= PlayerData.instance.coins;
+		if (!canAfford)
 			itemList.buyButton.interactable = false;
-			itemList.pricetext.color = Color.red;
-		}
-		else
-		{
-			itemList.pricetext.color = Color.black;
-		}
+
+		PremiumShopVisuals.OnItemRefreshed(itemList, canAfford);
 
 		if (c.GetPremiumCost() > PlayerData.instance.premium)
 		{

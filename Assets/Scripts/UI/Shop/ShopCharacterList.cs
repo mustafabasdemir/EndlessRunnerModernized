@@ -60,15 +60,12 @@ public class ShopCharacterList : ShopList
 
 	protected void RefreshButton(ShopItemListItem itm, Character c)
 	{
-		if (c.cost > PlayerData.instance.coins)
-		{
+		itm.buyButton.interactable = true;
+		bool canAfford = c.cost <= PlayerData.instance.coins;
+		if (!canAfford)
 			itm.buyButton.interactable = false;
-			itm.pricetext.color = Color.red;
-		}
-		else
-		{
-			itm.pricetext.color = Color.black;
-		}
+
+		PremiumShopVisuals.OnItemRefreshed(itm, canAfford);
 
 		if (c.premiumCost > PlayerData.instance.premium)
 		{

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e231bc370a66f6a4f8473bde46cb78b6, type: 3}
+  m_Name: PremiumUITheme
+  m_EditorClassIdentifier: Assembly-CSharp::PremiumUITheme
+  panelSurface: {fileID: 21300000, guid: faa8fb11ad11e2b4a9214483b8553818, type: 3}
+  panelNavy: {fileID: 21300000, guid: b19431ba2bf12ca44a818c8965d917d9, type: 3}
+  cardElevated: {fileID: 21300000, guid: 005b2062af35caf47a7f464ccf6c3a66, type: 3}
+  overlayDim: {fileID: 21300000, guid: f113c4024a6df624281c82dc15a985a8, type: 3}
+  buttonPrimary: {fileID: 21300000, guid: d706f38ea4122e74fb16141c1cb09bd4, type: 3}
+  buttonSecondary: {fileID: 21300000, guid: 39503efc8a21a8841b481b2fca76f752, type: 3}
+  buttonDisabled: {fileID: 21300000, guid: 559e8a7389399a0458a8a2cbe81c794b, type: 3}
+  buttonDanger: {fileID: 21300000, guid: ec61a9072b1862044b3f0fa9c44792b9, type: 3}
+  tabActive: {fileID: 21300000, guid: bf8045dc2acf7bf45bb43c46171b191e, type: 3}
+  tabInactive: {fileID: 21300000, guid: 52c6b1b75377aa044953ce26d7d5d282, type: 3}
+  progressBackground: {fileID: 21300000, guid: c711a951d9c8aff47a43960e372c7775, type: 3}
+  progressFill: {fileID: 21300000, guid: ec3bbaf116cf0dc43bddef1fa3de2485, type: 3}
+  sliceBorder: 32

@@ -7,40 +7,86 @@ public class MissionEntry : MonoBehaviour
     public Text rewardText;
     public Button claimButton;
     public Text progressText;
-	public Image background;
+    public Image background;
 
-	public Color notCompletedColor;
-	public Color completedColor;
+    public Image progressFill;
+    public GameObject progressSection;
+    public Image rewardIcon;
+
+    public Color notCompletedColor;
+    public Color completedColor;
+
+    Ui20HorizontalProgressBar m_ProgressBar;
+
+    void Awake()
+    {
+        m_ProgressBar = GetComponentInChildren<Ui20HorizontalProgressBar>(true);
+    }
 
     public void FillWithMission(MissionBase m, MissionUI owner)
     {
-        descText.text = m.GetMissionDesc();
-        rewardText.text = m.reward.ToString();
+        descText.text = m.GetMissionDesc().ToUpperInvariant();
+        rewardText.text = "+" + m.reward;
+
+        claimButton.onClick.RemoveAllListeners();
+
+        float ratio = m.max > 0f ? m.progress / m.max : 0f;
+        if (m_ProgressBar != null)
+            m_ProgressBar.SetNormalized(ratio);
+        else if (progressFill != null)
+        {
+            var rt = progressFill.rectTransform;
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
 
         if (m.isComplete)
         {
             claimButton.gameObject.SetActive(true);
-            progressText.gameObject.SetActive(false);
+            SetProgressVisible(false);
 
-			background.color = completedColor;
+            background.color = completedColor;
+            descText.color = Ui20Palette.BodyText;
+            rewardText.color = Ui20Palette.AccentOrange;
+            progressText.color = Ui20Palette.MutedText;
 
-			progressText.color = Color.white;
-			descText.color = Color.white;
-			rewardText.color = Color.white;
-
-			claimButton.onClick.AddListener(delegate { owner.Claim(m); } );
+            claimButton.onClick.AddListener(delegate { owner.Claim(m); });
         }
         else
         {
             claimButton.gameObject.SetActive(false);
-            progressText.gameObject.SetActive(true);
+            SetProgressVisible(true);
 
-			background.color = notCompletedColor;
+            background.color = notCompletedColor;
+            descText.color = Ui20Palette.BodyText;
+            rewardText.color = Ui20Palette.AccentOrange;
+            progressText.color = Ui20Palette.DeepNavy;
 
-			progressText.color = Color.black;
-			descText.color = completedColor;
-
-			progressText.text = ((int)m.progress) + " / " + ((int)m.max);
+            progressText.text = FormatProgressLine(m);
         }
+
+        if (rewardIcon != null)
+            rewardIcon.color = Color.white;
+    }
+
+    void SetProgressVisible(bool visible)
+    {
+        if (progressSection != null)
+            progressSection.SetActive(visible);
+        else if (progressText != null)
+            progressText.gameObject.SetActive(visible);
+    }
+
+    static string FormatProgressLine(MissionBase m)
+    {
+        string desc = m.GetMissionDesc().ToLowerInvariant();
+        int current = (int)m.progress;
+        int target = (int)m.max;
+        if (desc.Contains("single run") || desc.StartsWith("slide for"))
+            return current + " / " + target + " m";
+        return current + " / " + target;
     }
 }
