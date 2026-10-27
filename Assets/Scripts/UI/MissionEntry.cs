@@ -42,5 +42,9 @@ public class MissionEntry : MonoBehaviour
 
 			progressText.text = ((int)m.progress) + " / " + ((int)m.max);
         }
+
+        var premiumCard = GetComponent<PremiumMissionCardStyle>();
+        if (premiumCard != null)
+            premiumCard.ApplyMissionState(this, m);
     }
 }
