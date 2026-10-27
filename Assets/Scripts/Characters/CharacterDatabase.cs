@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -30,14 +31,24 @@ public class CharacterDatabase
         {
             m_CharactersDict = new Dictionary<string, Character>();
 
-            yield return Addressables.LoadAssetsAsync<GameObject>("characters", op =>
+            var handle = Addressables.LoadAssetsAsync<GameObject>("characters", op =>
             {
                 Character c = op.GetComponent<Character>();
-                if (c != null)
-                {
+                if (c != null && !m_CharactersDict.ContainsKey(c.characterName))
                     m_CharactersDict.Add(c.characterName, c);
-                }
             });
+
+            yield return handle;
+
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError(
+                    "CharacterDatabase: Addressables failed to load label 'characters'. "
+                    + "Build Addressables for Android (Trash Dash Debug > Build with Bundle) before device builds. "
+                    + handle.OperationException);
+                m_Loaded = false;
+                yield break;
+            }
 
             m_Loaded = true;
         }

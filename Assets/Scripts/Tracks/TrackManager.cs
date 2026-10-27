@@ -199,9 +199,15 @@ public class TrackManager : MonoBehaviour
                 Vector3.zero,
                 Quaternion.identity);
             yield return op;
-            if (op.Result == null || !(op.Result is GameObject))
+            if (op.Status != AsyncOperationStatus.Succeeded || op.Result == null || !(op.Result is GameObject))
             {
-                Debug.LogWarning(string.Format("Unable to load character {0}.", PlayerData.instance.characters[PlayerData.instance.usedCharacter]));
+                Debug.LogError(
+                    "Unable to load character '"
+                    + PlayerData.instance.characters[PlayerData.instance.usedCharacter]
+                    + "'. Addressables runtime data or bundles are missing on device. "
+                    + "Build Addressables for Android, then rebuild the APK. "
+                    + op.OperationException);
+                isLoaded = false;
                 yield break;
             }
             Character player = op.Result.GetComponent<Character>();
@@ -222,6 +228,16 @@ public class TrackManager : MonoBehaviour
                 m_CurrentThemeData = tutorialThemeData;
             else
                 m_CurrentThemeData = ThemeDatabase.GetThemeData(PlayerData.instance.themes[PlayerData.instance.usedTheme]);
+
+            if (m_CurrentThemeData == null)
+            {
+                Debug.LogError(
+                    "Theme data '"
+                    + PlayerData.instance.themes[PlayerData.instance.usedTheme]
+                    + "' is unavailable. Ensure Addressables content is built and ThemeDatabase loaded.");
+                isLoaded = false;
+                yield break;
+            }
 
             m_CurrentZone = 0;
             m_CurrentZoneDistance = 0;

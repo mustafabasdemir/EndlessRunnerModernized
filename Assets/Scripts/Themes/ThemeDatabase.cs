@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 // Handles loading data from the Asset Bundle to handle different themes for the game
 public class ThemeDatabase
@@ -29,14 +30,23 @@ public class ThemeDatabase
             themeDataList = new Dictionary<string, ThemeData>();
 
 
-            yield return Addressables.LoadAssetsAsync<ThemeData>("themeData", op =>
+            var handle = Addressables.LoadAssetsAsync<ThemeData>("themeData", op =>
             {
-                if (op != null)
-                {
-                    if(!themeDataList.ContainsKey(op.themeName))
-                        themeDataList.Add(op.themeName, op);
-                }
+                if (op != null && !themeDataList.ContainsKey(op.themeName))
+                    themeDataList.Add(op.themeName, op);
             });
+
+            yield return handle;
+
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError(
+                    "ThemeDatabase: Addressables failed to load label 'themeData'. "
+                    + "Build Addressables for Android before device builds. "
+                    + handle.OperationException);
+                m_Loaded = false;
+                yield break;
+            }
 
             m_Loaded = true;
         }
