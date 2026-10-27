@@ -97,7 +97,7 @@ public class Missile : Obstacle
 					if(m_Audio != null && movingSound != null && movingSound.Length > 0)
 					{
 						m_Audio.clip = movingSound[Random.Range(0, movingSound.Length)];
-						m_Audio.Play();
+						AudioPlayUtility.Play(m_Audio);
 						m_Audio.loop = true;
 					}
 

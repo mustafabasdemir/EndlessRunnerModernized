@@ -58,7 +58,7 @@ public abstract class Consumable : MonoBehaviour
 		if (activatedSound != null)
 		{
 			c.powerupSource.clip = activatedSound;
-			c.powerupSource.Play();
+			AudioPlayUtility.Play(c.powerupSource);
 		}
 
         if(ActivatedParticleReference != null)
@@ -108,7 +108,7 @@ public abstract class Consumable : MonoBehaviour
             if (c.consumables[i].active && c.consumables[i].activatedSound != null)
             {//if there is still an active consumable that have a sound, this is the one playing now
                 c.powerupSource.clip = c.consumables[i].activatedSound;
-                c.powerupSource.Play();
+                AudioPlayUtility.Play(c.powerupSource);
             }
         }
     }

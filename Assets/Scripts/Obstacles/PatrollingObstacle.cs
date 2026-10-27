@@ -62,7 +62,7 @@ public class PatrollingObstacle : Obstacle
 		{
 			m_Audio.loop = true;
 			m_Audio.clip = patrollingSound[Random.Range(0,patrollingSound.Length)];
-			m_Audio.Play();
+			AudioPlayUtility.Play(m_Audio);
 		}
 
 		m_OriginalPosition = transform.localPosition + transform.right * m_Segement.manager.laneOffset;

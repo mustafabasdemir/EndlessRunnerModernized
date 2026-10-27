@@ -29,7 +29,7 @@ public abstract class Obstacle : MonoBehaviour
 			audioSource.Stop();
 			audioSource.loop = false;
 			audioSource.clip = impactedSound;
-			audioSource.Play();
+			AudioPlayUtility.Play(audioSource);
 		}
 	}
 }

@@ -79,7 +79,7 @@ public class MusicPlayer : MonoBehaviour
         {
         	stems[i].source.clip = stems[i].clip;
 			stems [i].source.volume = 0.0f;
-            stems[i].source.Play();
+            AudioPlayUtility.Play(stems[i].source);
         }
 
 		// This is to fix a bug in the Audio Mixer where attenuation will be applied only a few ms after the source start playing.

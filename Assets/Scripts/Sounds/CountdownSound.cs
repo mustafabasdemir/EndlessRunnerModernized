@@ -10,8 +10,11 @@ public class CountdownSound : MonoBehaviour
 	void OnEnable()
 	{
 		m_Source = GetComponent<AudioSource>();
+		if (m_Source == null || m_Source.clip == null)
+			return;
+
 		m_TimeToDisable = m_Source.clip.length;
-        m_Source.PlayDelayed(k_StartDelay);
+        AudioPlayUtility.PlayDelayed(m_Source, k_StartDelay);
 	}
 
 	void Update()
